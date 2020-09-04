@@ -1,16 +1,16 @@
-var spawn = require('child_process').spawn;
+var spawn      = require('child_process').spawn;
 var JSONStream = require('JSONStream');
-var fs = require("fs");
-var path = require("path");
+var fs         = require("fs");
+var path       = require("path");
 
 function Sybase(host, port, dbname, username, password, logTiming, pathToJavaBridge)
 {
     this.connected = false;
-    this.host = host;
-    this.port = port;
-    this.dbname = dbname;
-    this.username = username;
-    this.password = password;    
+    this.host      = host;
+    this.port      = port;
+    this.dbname    = dbname;
+    this.username  = username;
+    this.password  = password;
     this.logTiming = (logTiming == true);
     
     this.pathToJavaBridge = pathToJavaBridge;
@@ -31,7 +31,7 @@ Sybase.prototype.connect = function(callback)
     this.javaDB = spawn('java',["-jar",this.pathToJavaBridge, this.host, this.port, this.dbname, this.username, this.password]);
 
     var hrstart = process.hrtime();
-	this.javaDB.stdout.once("data", function(data) {
+  	this.javaDB.stdout.once("data", function(data) {
 		if ((data+"").trim() != "connected")
 		{
 			callback(new Error("Error connecting " + data));
@@ -85,12 +85,14 @@ Sybase.prototype.query = function(sql, callback)
     msg.callback = callback;
     msg.hrstart = hrstart;
 
-    console.log("this: " + this + " currentMessages: " +  this.currentMessages + " this.queryCount: " + this.queryCount);
+    if( this.logTiming ) 
+      console.log("this: " + this + " currentMessages: " +  this.currentMessages + " this.queryCount: " + this.queryCount);
     
     this.currentMessages[msg.msgId] = msg;
 
     this.javaDB.stdin.write(strMsg + "\n");
-    console.log("sql request written: " + strMsg);
+    if( this.logTiming)
+      console.log("sql request written: " + strMsg);
 };
 
 Sybase.prototype.onSQLResponse = function(jsonMsg)
@@ -108,12 +110,12 @@ Sybase.prototype.onSQLResponse = function(jsonMsg)
 	hrend = process.hrtime(request.hrstart);
 	var javaDuration = (jsonMsg.javaEndTime - jsonMsg.javaStartTime);
 
-    if (jsonMsg.error !== undefined)
-        err = new Error(jsonMsg.error);
-
+  if (jsonMsg.error !== undefined)
+      err = new Error(jsonMsg.error);
 
 	if (this.logTiming)
-		console.log("Execution time (hr): %ds %dms dbTime: %dms dbSendTime: %d sql=%s", hrend[0], hrend[1]/1000000, javaDuration, sendTimeMS, request.sql);
+    console.log("Execution time (hr): %ds %dms dbTime: %dms dbSendTime: %d sql=%s", hrend[0], hrend[1]/1000000, javaDuration, sendTimeMS, request.sql);
+    
 	request.callback(err, result);
 };
 
